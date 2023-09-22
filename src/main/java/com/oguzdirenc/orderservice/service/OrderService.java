@@ -1,5 +1,6 @@
 package com.oguzdirenc.orderservice.service;
 
+import com.oguzdirenc.orderservice.dto.InventoryResponse;
 import com.oguzdirenc.orderservice.dto.OrderLineItemsDto;
 import com.oguzdirenc.orderservice.dto.OrderRequest;
 import com.oguzdirenc.orderservice.model.Order;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -32,7 +34,26 @@ public class OrderService {
 
         order.setOrderLineItemsList(orderLineItems);
 
-        orderRepository.save(order);
+        List<String> skuCodes = order.getOrderLineItemsList().stream()
+                .map(OrderLineItems::getSkuCode)
+                .toList();
+
+        InventoryResponse[] inventoryResponses = webClient.get()
+                .uri("http://localhost:8082/api/inventory",
+                        uriBuilder -> uriBuilder.queryParam("skuCode", skuCodes).build())
+                        .retrieve()
+                                .bodyToMono(InventoryResponse[].class)
+                                        .block();
+
+        boolean allProductsInStock = Arrays.stream(inventoryResponses)
+                .allMatch(InventoryResponse::isInStock);
+
+        if(Boolean.TRUE.equals(allProductsInStock)){
+            orderRepository.save(order);
+        } else {
+            throw new IllegalArgumentException("Product is not in stock.");
+        }
+
     }
 
     private OrderLineItems mapToDto(OrderLineItemsDto orderLineItemsDto) {
