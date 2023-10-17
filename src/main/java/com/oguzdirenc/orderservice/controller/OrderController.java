@@ -6,6 +6,7 @@ import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,6 +18,8 @@ import java.util.concurrent.CompletableFuture;
 public class OrderController {
 
     private final OrderService orderService;
+    @Value("${my.greeting}")
+    public String message;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -29,5 +32,11 @@ public class OrderController {
 
     public CompletableFuture<String> fallBackMethod(OrderRequest orderRequest,RuntimeException runtimeException){
         return CompletableFuture.supplyAsync(()->"Something is wrong");
+    }
+
+    @RequestMapping("/config")
+    @GetMapping
+    public String configTest(){
+        return message;
     }
 }
